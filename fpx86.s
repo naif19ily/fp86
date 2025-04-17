@@ -13,6 +13,10 @@
 	syscall
 .endm
 
+.macro	ADVANCE_BY_ONE_IN_BUFFER
+	incq	-16(%rbp)
+	incq	-24(%rbp)
+.endm
 
 #
 # How to get the next argument:
@@ -32,13 +36,15 @@
 #
 #
 #
-.macro	GET_NEXT_ARG
+.macro	GET_NEXT_ARG__R8
 	movq	-40(%rbp), %rax
 	movq	$8, %rbx
 	mulq	%rbx
 	addq	$16, %rax
-	movq	(%rbp, %rax, 1), %rax
+	movq	(%rbp, %rax, 1), %r8
 .endm
+
+
 
 .globl	fpx86
 
@@ -60,9 +66,6 @@ fpx86:
 	movq	%rax, -24(%rbp)
 	movq	%rsi, -32(%rbp)
 	movq	$0, -40(%rbp)
-
-	GET_NEXT_ARG
-	EXIT	%rax
 
 # Eats the next character into the format string
 # also makes sure there is not overflow since
@@ -88,32 +91,41 @@ fpx86:
 	#
 	movq	-24(%rbp), %rax
 	movb	%dil, (%rax)
-	incq	-16(%rbp)
-	incq	-24(%rbp)
+	ADVANCE_BY_ONE_IN_BUFFER
 	jmp	.go_next_char
 
 .parse_format:
+	GET_NEXT_ARG__R8
+	incq	-40(%rbp)
 	incq	-8(%rbp)
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
-
 	cmpb	$'c', %dil
 	je	.parse_character
-
 	cmpb	$'d', %dil
 	je	.parse_integer
-
-
-
 	cmpb	$'s', %dil
 	je	.parse_string
+	cmpb	$'%', %dil
+	je	.parse_percentage
+	jmp	.fatal_unknown_format
 
 .parse_character:
+	movq	-24(%rbp), %rax
+	movb	%r8b, (%rax)
+	ADVANCE_BY_ONE_IN_BUFFER
+	jmp	.go_next_char
 
 .parse_integer:
 
 .parse_string:
 
+.parse_percentage:
+	movq	-24(%rbp), %rax
+	movb	$'%', (%rax)
+	incq	-16(%rbp)
+	incq	-24(%rbp)
+	jmp	.go_next_char
 
 .go_next_char:
 	incq	-8(%rbp)
@@ -140,3 +152,6 @@ fpx86:
 #                 ||     ||
 .fatal_buffer_overflow:
 	EXIT	$1
+
+.fatal_unknown_format:
+	EXIT	$2
