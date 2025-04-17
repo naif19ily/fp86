@@ -13,24 +13,56 @@
 	syscall
 .endm
 
+
+#
+# How to get the next argument:
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+.macro	GET_NEXT_ARG
+	movq	-40(%rbp), %rax
+	movq	$8, %rbx
+	mulq	%rbx
+	addq	$16, %rax
+	movq	(%rbp, %rax, 1), %rax
+.endm
+
 .globl	fpx86
 
 fpx86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$32, %rsp
+	subq	$40, %rsp
 	#
 	# Stack distribution
 	# -8(%rbp):	format string copy
 	# -16(%rbp):	bytes written so far
 	# -24(%rbp):	pointer to buffer content
 	# -32(%rbp):	fd to write
+	# -40(%rbp):	number of args used
 	#
 	movq	%rdi, -8(%rbp)
 	movq	$0, -16(%rbp)
 	leaq	.BUFFER(%rip), %rax
 	movq	%rax, -24(%rbp)
 	movq	%rsi, -32(%rbp)
+	movq	$0, -40(%rbp)
+
+	GET_NEXT_ARG
+	EXIT	%rax
 
 # Eats the next character into the format string
 # also makes sure there is not overflow since
@@ -61,6 +93,27 @@ fpx86:
 	jmp	.go_next_char
 
 .parse_format:
+	incq	-8(%rbp)
+	movq	-8(%rbp), %rax
+	movzbl	(%rax), %edi
+
+	cmpb	$'c', %dil
+	je	.parse_character
+
+	cmpb	$'d', %dil
+	je	.parse_integer
+
+
+
+	cmpb	$'s', %dil
+	je	.parse_string
+
+.parse_character:
+
+.parse_integer:
+
+.parse_string:
+
 
 .go_next_char:
 	incq	-8(%rbp)
@@ -73,6 +126,7 @@ fpx86:
 	movq	-16(%rbp), %rdx
 	syscall
 
+	movq	-16(%rbp), %rax
 	leave
 	ret
 
