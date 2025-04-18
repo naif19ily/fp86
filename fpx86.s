@@ -1,9 +1,11 @@
 .section .rodata
 	.BUFFER_LENGTH: .quad 2056
+	.NUMBUF_LENGTH: .quad   16
 
 
 .section .bss
 	.BUFFER: .zero 2056
+	.NUMBUF: .zero   16
 
 .section .text
 
@@ -38,7 +40,7 @@
 fpx86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$40, %rsp
+	subq	$48, %rsp
 	#
 	# Stack distribution
 	# -8(%rbp):	format string copy
@@ -46,6 +48,7 @@ fpx86:
 	# -24(%rbp):	pointer to buffer content
 	# -32(%rbp):	fd to write
 	# -40(%rbp):	number of args used
+	# -48(%rbp):    nubuf position
 	#
 	movq	%rdi, -8(%rbp)
 	movq	$0, -16(%rbp)
@@ -53,6 +56,7 @@ fpx86:
 	movq	%rax, -24(%rbp)
 	movq	%rsi, -32(%rbp)
 	movq	$0, -40(%rbp)
+	movq	$0, -48(%rbp)
 
 # Eats the next character into the format string
 # also makes sure there is not overflow since
@@ -119,18 +123,36 @@ fpx86:
 
 .parse_integer_loop:
 	cmpq	$0, %r8
-	je	.go_next_char
-	CHECK_BUFFER_SPACE
+	je	.parse_integer_fully_parsed
+	movq	.NUMBUF_LENGTH(%rip), %rax
+	cmpq	%rax, -48(%rbp)
+	je	.fatal_number_overflow
 	movq	%r8, %rax
 	movq	$10, %rbx
 	xorq	%rdx, %rdx
 	divq	%rbx
 	movq	%rax, %r8
-	movq	-24(%rbp), %rax
 	addq	$'0', %rdx
+	leaq	.NUMBUF(%rip), %rax
+	addq	-48(%rbp), %rax
 	movb	%dl, (%rax)
-	ADVANCE_BY_ONE_IN_BUFFER
+	incq	-48(%rbp)
 	jmp	.parse_integer_loop
+
+.parse_integer_fully_parsed:
+	CHECK_BUFFER_SPACE
+	movq	-48(%rbp), %rbx
+	decq	%rbx
+	leaq	.NUMBUF(%rip), %rax
+	addq	%rbx, %rax
+	movzbl	(%rax), %ebx
+	movq	-24(%rbp), %rax
+	movb	%bl, (%rax)
+	decq	-48(%rbp)
+	ADVANCE_BY_ONE_IN_BUFFER
+	cmpq	$0, -48(%rbp)
+	je	.go_next_char
+	jmp	.parse_integer_fully_parsed
 
 .parse_string:
 	CHECK_BUFFER_SPACE
@@ -178,3 +200,6 @@ fpx86:
 
 .fatal_unknown_format:
 	EXIT	$2
+
+.fatal_number_overflow:
+	EXIT	$3

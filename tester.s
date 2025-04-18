@@ -1,6 +1,6 @@
 .section .rodata
 	.msg: .string "12345"
-	.fmt: .string "%d number\n"
+	.fmt: .string "%d %d %d\n"
 
 
 .section .text
@@ -14,7 +14,9 @@
 .globl _start
 
 _start:
-	pushq	$-34
+	pushq	$-1234567890
+	pushq	$1234567890
+	pushq	$0
 	leaq	.fmt(%rip), %rdi
 	movq	$1, %rsi
 	call	fpx86
