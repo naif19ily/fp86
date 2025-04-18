@@ -48,8 +48,7 @@
 	leaq	\a, %rsi
 	movq	\b, %rdx
 	syscall
-.ndm
-
+.endm
 
 .globl	fpx86
 

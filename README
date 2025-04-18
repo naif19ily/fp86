@@ -26,5 +26,12 @@
         pushq   $24, %rsp -----------------.
                                            v
     right after calling fpx86, the programmer must to add 8 * NoArgs bytes to rsp, this
-    must be done since rsp was alterated.
+    must be done since rsp was alterated. Or even a better way would be poping all args
+    pushed previosuly
+
+        popq    %rax        Pops J
+        popq    %rax        Pops 4
+        popq    %rax        Pops the string
+
+    This way the stack will be as if nothing happened
 
