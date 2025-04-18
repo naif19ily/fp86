@@ -1,15 +1,20 @@
 .section .rodata
 	.msg: .string "12345"
-	.fmt: .string "this is %s %% fmt\n"
+	.fmt: .string "%d number\n"
 
 
 .section .text
 
+.macro	EXIT c
+	movq	\c, %rdi
+	movq	$60, %rax
+	syscall
+.endm
+
 .globl _start
 
 _start:
-	leaq	.msg(%rip), %rax
-	pushq	%rax
+	pushq	$-34
 	leaq	.fmt(%rip), %rdi
 	movq	$1, %rsi
 	call	fpx86

@@ -114,20 +114,17 @@ fpx86:
 .parse_integer_add_neg:
 	movq	-24(%rbp), %rax
 	movb	$'-', (%rax)
-	negq	%r8
 	ADVANCE_BY_ONE_IN_BUFFER
 
-.parse_integer_loop:
+.parse_integer_loop:	
 	cmpq	$0, %r8
 	je	.go_next_char
 	CHECK_BUFFER_SPACE
 	movq	%r8, %rax
 	movq	$10, %rbx
-	xorq	%rdx, %rdx
 	divq	%rbx
 	movq	%rax, %r8
 	movq	-24(%rbp), %rax
-	addq	$'0', %rdx
 	movb	%dl, (%rax)
 	ADVANCE_BY_ONE_IN_BUFFER
 	jmp	.parse_integer_loop
