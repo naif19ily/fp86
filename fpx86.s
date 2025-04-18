@@ -18,24 +18,6 @@
 	incq	-24(%rbp)
 .endm
 
-#
-# How to get the next argument:
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
 .macro	GET_NEXT_ARG__R8
 	movq	-40(%rbp), %rax
 	movq	$8, %rbx
@@ -44,6 +26,11 @@
 	movq	(%rbp, %rax, 1), %r8
 .endm
 
+.macro	CHECK_BUFFER_SPACE
+	movq	-16(%rbp), %rax
+	cmpq	.BUFFER_LENGTH(%rip), %rax
+	je	.fatal_buffer_overflow
+.endm
 
 
 .globl	fpx86
@@ -71,9 +58,7 @@ fpx86:
 # also makes sure there is not overflow since
 # the maximum buffer length is '.BUFFER_LENGTH'
 .collect_chr_from_fmt:
-	movq	-16(%rbp), %rax
-	cmpq	.BUFFER_LENGTH(%rip), %rax
-	je	.fatal_buffer_overflow
+	CHECK_BUFFER_SPACE
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
 	cmpb	$0, %dil
@@ -119,6 +104,15 @@ fpx86:
 .parse_integer:
 
 .parse_string:
+	CHECK_BUFFER_SPACE
+	movzbl	(%r8), %edi
+	cmpb	$0, %dil
+	je	.go_next_char
+	movq	-24(%rbp), %rax
+	movb	%dil, (%rax)
+	incq	%r8
+	ADVANCE_BY_ONE_IN_BUFFER
+	jmp	.parse_string	
 
 .parse_percentage:
 	movq	-24(%rbp), %rax
