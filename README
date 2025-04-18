@@ -1,0 +1,30 @@
+
+    Tiny printf for x86 programs
+
+    This function must be called giving the following arguments:
+      - rdi:    Stores the printing format
+      - rsi:    fd where to write the final string
+
+    The supported formats are:
+      - s:      strings
+      - d:      numbers
+      - c:      characters
+
+    Arguments must be pushed into the stack, therefore, they shall
+    be given in the inverse order they are used in the format e.g.
+
+        format: .string "today is %s, also it's the %dth month, my name starts with '%c' letter."
+        day:    .string "jueves"   `-----.           `__________________,            |
+                                         |.___________.                 |            |
+        leaq    day(%rip), %rax                       |                 |            |
+        pushq   %rax                                string argument     |            |
+        pushq   $4                                  number argument-----'            |
+        pushq   $'J'                                character argument---------------`
+        leaq    format(%rip), %rdi
+        movq    STDOUT(%rip), %rsi
+        call    fpx86
+        pushq   $24, %rsp -----------------.
+                                           v
+    right after calling fpx86, the programmer must to add 8 * NoArgs bytes to rsp, this
+    must be done since rsp was alterated.
+
