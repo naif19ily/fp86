@@ -20,8 +20,15 @@ _start:
 	leaq	.fmt(%rip), %rdi
 	movq	$1, %rsi
 	call	fpx86
+	addq	$24, %rsp
 
-	addq	$8, %rsp
+	pushq	$1234567890
+	pushq	$0
+	pushq	$-1234567890
+	leaq	.fmt(%rip), %rdi
+	movq	$1, %rsi
+	call	fpx86
+	addq	$24, %rsp
 
 	movq	$60, %rax
 	movq	$60, %rdi

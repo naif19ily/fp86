@@ -2,6 +2,14 @@
 	.BUFFER_LENGTH: .quad 2056
 	.NUMBUF_LENGTH: .quad   16
 
+	.err1m: .string "\n  fpx86: fatal error: buffer overflow detected — the string provided exceeds the allowed size\n\n"
+	.err1l: .quad   99
+
+	.err2m: .string "\n  fpx86: fatal error: unknown printing format — ensure all format specifiers are valid and supported\n\n"
+	.err2l: .quad   105
+
+	.err3m: .string "\n  fpx86: fatal error: numeric overflow — the value given exceeds the representable range for this type\n\n"
+	.err3l: .quad   106
 
 .section .bss
 	.BUFFER: .zero 2056
@@ -32,6 +40,14 @@
 	movq	-16(%rbp), %rax
 	cmpq	.BUFFER_LENGTH(%rip), %rax
 	je	.fatal_buffer_overflow
+.endm
+
+.macro	ERRMSG a, b
+	movq	$1, %rax
+	movq	$2, %rdi
+	leaq	\a, %rsi
+	movq	\b, %rdx
+	syscall
 .endm
 
 
@@ -66,7 +82,7 @@ fpx86:
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
 	cmpb	$0, %dil
-	je	.c_fini
+	je	.print_and_clean
 	cmpb	$'%', %dil
 	je	.parse_format
 	#
@@ -176,13 +192,22 @@ fpx86:
 	incq	-8(%rbp)
 	jmp	.collect_chr_from_fmt
 
-.c_fini:
+.print_and_clean:
 	movq	$1, %rax
 	movq	-32(%rbp), %rdi
 	leaq	.BUFFER(%rip), %rsi
 	movq	-16(%rbp), %rdx
 	syscall
-
+	leaq	.BUFFER(%rip), %rax
+	movq	$0, %r8
+.clean_loop:
+	cmpq	.BUFFER_LENGTH(%rip), %r8
+	je	.ret
+	movq	$0, %rax
+	addq	$8, %rax
+	addq	$8, %r8
+	jmp	.clean_loop
+.ret:
 	movq	-16(%rbp), %rax
 	leave
 	ret
@@ -196,10 +221,13 @@ fpx86:
 #                 ||----w |
 #                 ||     ||
 .fatal_buffer_overflow:
+	ERRMSG  .err1m(%rip), .err1l(%rip)
 	EXIT	$1
 
 .fatal_unknown_format:
+	ERRMSG  .err2m(%rip), .err2l(%rip)
 	EXIT	$2
 
 .fatal_number_overflow:
+	ERRMSG  .err3m(%rip), .err3l(%rip)
 	EXIT	$3

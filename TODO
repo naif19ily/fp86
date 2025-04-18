@@ -2,5 +2,5 @@
     * parse simeple strings (no fmt)            [accomplished]
     * parse character formatting                [accomplished]
     * handle %%                                 [accomplished]
-    * parse numbers formatting                  
+    * parse numbers formatting                  [accomplished]
     * parse string formatting                   [accomplished]
