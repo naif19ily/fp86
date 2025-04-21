@@ -5,7 +5,7 @@
 
 .section .text
 
-.macro	EXIT c
+.macro EXIT c
 	movq	\c, %rdi
 	movq	$60, %rax
 	syscall

@@ -17,18 +17,18 @@
 
 .section .text
 
-.macro	EXIT c
+.macro EXIT c
 	movq	\c, %rdi
 	movq	$60, %rax
 	syscall
 .endm
 
-.macro	ADVANCE_BY_ONE_IN_BUFFER
+.macro ADVANCE_BY_ONE_IN_BUFFER
 	incq	-16(%rbp)
 	incq	-24(%rbp)
 .endm
 
-.macro	GET_NEXT_ARG__R8
+.macro GET_NEXT_ARG__R8
 	movq	-40(%rbp), %rax
 	movq	$8, %rbx
 	mulq	%rbx
@@ -36,13 +36,13 @@
 	movq	(%rbp, %rax, 1), %r8
 .endm
 
-.macro	CHECK_BUFFER_SPACE
+.macro CHECK_BUFFER_SPACE
 	movq	-16(%rbp), %rax
 	cmpq	.BUFFER_LENGTH(%rip), %rax
 	je	.fatal_buffer_overflow
 .endm
 
-.macro	ERRMSG a, b
+.macro ERRMSG a, b
 	movq	$1, %rax
 	movq	$2, %rdi
 	leaq	\a, %rsi
