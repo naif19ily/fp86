@@ -7,7 +7,7 @@ all: $(name)
 
 $(name): $(objs)
 	ld	-o $(name) $(objs)
-%.o: %.s
+%.o: %.asm
 	$(assb)	$< -o $@
 clean:
 	rm	-f $(objs) $(name) && clear
