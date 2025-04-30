@@ -1,6 +1,16 @@
 
-    * parse simeple strings (no fmt)            [accomplished]
-    * parse character formatting                [accomplished]
-    * handle %%                                 [accomplished]
-    * parse numbers formatting                  [accomplished]
-    * parse string formatting                   [accomplished]
+    * print non-formated strings
+    * (format) percentage signs              (%)
+    * (format) characters                    (c)
+    * (format) serie of characters           (s)
+    * (format) decimal system                (i)
+    * (format) binary system                 (b)
+    * (format) octal system                  (o)
+    * (format) hexadecimal system            (x)
+    * (format) addresses                     (a)
+    * (format) as exponential                (e)
+    * (format) boolean values                (B)
+    * (format) real number values            (r)
+    * (flag)   left justify                  (-)
+    * (flag)   right justify                 (+)
+
