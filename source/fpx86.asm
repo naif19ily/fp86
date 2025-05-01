@@ -1,89 +1,129 @@
+#
+#  _______ _______       _______ _______ 
+# |   _   |   _   .--.--|   _   |   _   |
+# |.  1___|.  1   |_   _|.  |   |   1___|
+# |.  __) |.  ____|__.__|.  _   |.     \ 
+# |:  |   |:  |         |:  1   |:  1   |
+# |::.|   |::.|         |::.. . |::.. . |
+# `---'   `---'         `-------`-------'
+#
+# Tiny implementation of `fprintf` funtion found
+# in C programming language
+#
+# CC0-1.0 license
+#
+
 .section .bss
-	.lcomm buffer, 2048
+	.buffer: .zero 2048
+
+.section .rodata
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ max buffer size ~~~~~~~~~~~~ #
+	.buffer_length: .quad 2048                                     #
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ error messages ~~~~~~~~~~~~~ #
+	.e_buf_overflow_msg: .string "\n  FPx86: buffer overflow\n\n"  #
+	.e_buf_overflow_len: .quad 27                                  #
+	                                                               #
+	.e_unknown_format_msg: .string "\n  FPx86: unknown format\n\n" #
+	.e_unknown_format_len: .quad 27                                #
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 .section .text
 
-.globl fpx86
+.macro EXIT a
+	movq	\a, %rdi
+	movq	$60, %rax
+	syscall
+.endm
 
-fpx86:
+.macro FATAL a, b
+	movq	$1, %rax
+	movq	$2, %rdi
+	leaq	\a, %rsi
+	movq	\b, %rdx
+	syscall
+.endm
+
+.macro GETARG
+	movq	-36(%rbp), %rcx
+	movq	(%rbp, %rcx), %r9
+	addq	$8, -36(%rbp)
+.endm
+
+
+.globl FPx86
+
+FPx86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$28, %rsp
+	subq	$64, %rsp
 	#
 	# Stack distribution
-	#
-	#  -8: number of bytes written
-	# -16: pointer to buffer
-	# -24: format string
-	# -28: fd
-	#
-	movq	%rdi, -24(%rbp)
-	movl	%esi, -28(%rbp)
-	call	.__is_formated_string
-	cmpq	$0, %rax
-	jl	.__0_no_fmt_used
-
-	jmp	.__0_return
-
-.__0_no_fmt_used:
-	negq	%rax
-	leave
-	ret
-
-.__0_return:
-	movq	-8(%rbp), %rax
-	leave
-	ret
-
-
-#
-# Function: checks if the given string contains an actual
-# format, if the string does not, then this will print the
-# string via write syscall and it will return -1 * bytes to indicate
-# it, otherwise it will return the number of characters already
-# read before hitting the format specifier symbol (%)
-#
-.__is_formated_string:
-	pushq	%rbp
-	movq	%rsp, %rbp
-	subq	$20, %rsp
-	#
-	# Stack  distribution
-	#
-	#  -8: string
-	# -16: number of bytes read
-	# -20: fd
+	#  -8: format string pointer
+	# -16: buffer pointer
+	# -20: file descriptor
+	# -28: number of bytes used in buffer
+	# -36: stack offset (to get the next argument previously pushed into the stack)
 	#
 	movq	%rdi, -8(%rbp)
-	movq	$0, -16(%rbp)
+	leaq	.buffer(%rip), %rax
+	movq	%rax, -16(%rbp)
 	movl	%esi, -20(%rbp)
-	xorq	%rdi, %rdi
-.__1_loop:
+	movq	$0, -28(%rbp)
+	movq	$16, -36(%rbp)
+.__0_loop:
+	movq	-28(%rbp), %rax
+	cmpq	.buffer_length(%rip), %rax
+	je	.e_buffer_overflow
 	movq	-8(%rbp), %rax
-	movq	-16(%rbp), %rcx
-	addq	%rcx, %rax
-	movzbl	(%rax), %eax
-	cmpb	$0, %al
-	jz	.__1_print_and_leave
-	cmpb	$'%', %al
-	jz	.__1_return
+	movzbl	(%rax), %edi
+	cmpb	$0, %dil
+	jz	.__0_return
+	cmpb	$'%', %dil
+	jz	.__0_fmt_found
+	movq	-16(%rbp), %rax
+	movb	%dil, (%rax)
+	jmp	.__0_continue
+.__0_fmt_found:
+	movq	-16(%rbp), %r8
+	incq	-8(%rbp)
+	movq	-8(%rbp), %rax
+	movzbl	(%rax), %edi
+	cmpb	$'%', %dil
+	jz	.__0_fmt_is_per
+	cmpb	$'c', %dil
+	jz	.__0_fmt_is_chr
+	jmp	.e_unknown_fmt
+.__0_fmt_is_per:
+	movb	$'%', (%r8)
+	jmp	.__0_continue
+.__0_fmt_is_chr:
+	GETARG
+	movb	%r9b, (%r8)
+	jmp	.__0_continue	
+
+.__0_continue:
+	incq	-8(%rbp)
 	incq	-16(%rbp)
-	jmp	.__1_loop
-.__1_print_and_leave:
-	movq	$1, %rax
+	incq	-28(%rbp)
+	jmp	.__0_loop
+
+.__0_return:
+	movq	-28(%rbp), %rdx
+	leaq	.buffer(%rip), %rsi
+	xorq	%rdi, %rdi
 	movl	-20(%rbp), %edi
-	movq	-8(%rbp), %rsi
-	movq	-16(%rbp), %rdx
+	movq	$1, %rax
 	syscall
-	movq	-16(%rbp), %rax
-	negq	%rax
+	movq	%rdx, %rax
 	leave
 	ret
-.__1_return:
-	# it decrements the value of rax since it is currently
-	# pointing to the % sign which is used to know there's
-	# a format, we cannot print % itself.
-	movq	-16(%rbp), %rax
-	decq	%rax
-	leave
-	ret
+
+.e_buffer_overflow:
+	FATAL	.e_buf_overflow_msg(%rip), .e_buf_overflow_len(%rip)
+	EXIT	$-1
+
+.e_unknown_fmt:
+	FATAL	.e_unknown_format_msg(%rip), .e_unknown_format_len(%rip)
+	EXIT	$-2
