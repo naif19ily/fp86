@@ -1,8 +1,8 @@
 
     * print non-formated strings                    ok
-    * (format) percentage signs              (%)
-    * (format) characters                    (c)
-    * (format) serie of characters           (s)
+    * (format) percentage signs              (%)    ok
+    * (format) characters                    (c)    ok
+    * (format) serie of characters           (s)    ok
     * (format) decimal system                (i)
     * (format) binary system                 (b)
     * (format) octal system                  (o)

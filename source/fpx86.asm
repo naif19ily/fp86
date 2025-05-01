@@ -84,9 +84,9 @@ FPx86:
 	jz	.__0_fmt_found
 	movq	-16(%rbp), %rax
 	movb	%dil, (%rax)
+	incq	-28(%rbp)
 	jmp	.__0_continue
 .__0_fmt_found:
-	movq	-16(%rbp), %r8
 	incq	-8(%rbp)
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
@@ -94,19 +94,67 @@ FPx86:
 	jz	.__0_fmt_is_per
 	cmpb	$'c', %dil
 	jz	.__0_fmt_is_chr
+	cmpb	$'s', %dil
+	jz	.__0_fmt_is_str
 	jmp	.e_unknown_fmt
+
+
+#  _________________________
+# < Parsing percentage sign >
+#  -------------------------
+#         \   ^__^
+#          \  (oo)\_______
+#             (__)\       )\/\
+#                 ||----w |
+#                 ||     ||
 .__0_fmt_is_per:
+	movq	-16(%rbp), %r8
 	movb	$'%', (%r8)
+	incq	-28(%rbp)
 	jmp	.__0_continue
+
+#  _________________________
+# <      Parsing chars      >
+#  -------------------------
+#         \   ^__^
+#          \  (oo)\_______
+#             (__)\       )\/\
+#                 ||----w |
+#                 ||     ||
 .__0_fmt_is_chr:
 	GETARG
+	movq	-16(%rbp), %r8
 	movb	%r9b, (%r8)
-	jmp	.__0_continue	
+	incq	-28(%rbp)
+	jmp	.__0_continue
+
+#  _________________________
+# <      Parsing strgs      >
+#  -------------------------
+#         \   ^__^
+#          \  (oo)\_______
+#             (__)\       )\/\
+#                 ||----w |
+#                 ||     ||
+.__0_fmt_is_str:
+	GETARG
+.__0_fmt_str_loop:
+	movzbl	(%r9), %edi
+	cmpb	$0, %dil
+	jz	.__0_fmt_str_fini
+	movq	-16(%rbp), %rax
+	movb	%dil, (%rax)
+	incq	-28(%rbp)
+	incq	-16(%rbp)
+	incq	%r9
+	jmp	.__0_fmt_str_loop
+.__0_fmt_str_fini:
+	decq	-16(%rbp)
+	jmp	.__0_continue
 
 .__0_continue:
 	incq	-8(%rbp)
 	incq	-16(%rbp)
-	incq	-28(%rbp)
 	jmp	.__0_loop
 
 .__0_return:
