@@ -12,17 +12,15 @@
 #
 
 .section .rodata
-        .fmt: .string "%%%s%c\n"
-	.cat: .string "123"
+        .fmt: .string "> %b\n"
+	.cat: .string "1"
 
 .section .text
 
 .globl _start
 
 _start:
-	pushq	$'!'
-	leaq	.cat(%rip), %rax
-	pushq	%rax
+        pushq   $0
         leaq    .fmt(%rip), %rdi
         movl    $1, %esi
         call    FPx86
