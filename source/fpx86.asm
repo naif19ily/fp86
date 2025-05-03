@@ -7,63 +7,29 @@
 # |::.|   |::.|         |::.. . |::.. . |
 # `---'   `---'         `-------`-------'
 #
-# Tiny implementation of `fprintf` funtion found
-# in C programming language
-#
-# CC0-1.0 license
-#
+.section .rodata
+	.BufferSize: .quad 2048
+
+	.DecSys:
+		.quad 1
+		.quad 10
+		.quad 100
 
 .section .bss
-	.buffer: .zero 2048
-	.numbuf: .zero 64
-
-.section .rodata
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ constants ~~~~~~~~~~~~~~~~~~ #
-	.buffer_length: .quad 2048                                     #
-	.numbuf_length: .quad 64                                       # 
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ error messages ~~~~~~~~~~~~~ #
-	.e_buf_overflow_msg: .string "\n  FPx86: buffer overflow\n\n"  #
-	.e_buf_overflow_len: .quad 27                                  #
-	                                                               #
-	.e_unknown_format_msg: .string "\n  FPx86: unknown format\n\n" #
-	.e_unknown_format_len: .quad 27                                #
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+	.Buffer: .zero 2048
 
 .section .text
 
-.macro WRITER a, b
-	leaq	\a, %rsi
-	movq	\b, %rdx
-	movq	$2, %rdi
-	movq	$1, %rax
-	syscall
-.endm
-
-.macro EXIT a
-	movq	\a, %rdi
+.macro EXIT status
+	movq	\status, %rdi
 	movq	$60, %rax
 	syscall
 .endm
 
 .macro GETARG
-	movq	-28(%rbp), %rcx
-	movq	(%rbp, %rcx), %r9
-	addq	$8, -28(%rbp)
-.endm
-
-.macro PREFIX a
 	movq	-20(%rbp), %rax
-	addq	$2, %rax
-	cmpq	.buffer_length(%rip), %rax
-	jge	.__fatal__buffer_overflow
-	movb	$'0', (%r8)
-	incq	%r8
-	incq	-20(%rbp)
-	movb	\a, (%r8)
-	incq	%r8
-	incq	-20(%rbp)
+	movq	(%rbp, %rax), %r9
+	addq	$8, -20(%rbp)
 .endm
 
 .globl FPx86
@@ -71,150 +37,228 @@
 FPx86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$32, %rsp
+	subq	$64, %rsp
 	#
-	# Stack disttibution
-	#  -8: format string pointer
+	# Stack distribution
+	#  -8: format string
 	# -12: file descriptor
-	# -20: number of bytes written in buffer
-	# -28: offset to next argument into stack
+	# -20: offset from rbp
+	# -28: number of bytes written
+	# -30: justify flag (< left & > right)
+	# -32: padding number
 	#
 	movq	%rdi, -8(%rbp)
 	movl	%esi, -12(%rbp)
-	movq	$0, -20(%rbp)
+	movq	$16,  -20(%rbp)
+	movq	$0,   -28(%rbp)
+	movw	$0,   -30(%rbp)
+	movw	$0,   -32(%rbp)
 	#
-	# R8 register is used to access the buffer, this is done
-	# to improve performance
+	# R8 is going to work as a pointer to the
+	# location within the buffer where we can
+	# write the next character.
 	#
-	leaq	.buffer(%rip), %r8
+	leaq	.Buffer(%rip), %r8
 	#
-	# Variable starts with an offset of 16 bytes
-	# in order to skip rbp and return address positions
+	# Making sure string provided is not NULL
 	#
-	movq	$16, -28(%rbp)
-.__0_loop:
-	movq	-20(%rbp), %rax
-	cmpq	.buffer_length(%rip), %rax
-	jz	.__fatal__buffer_overflow
+	cmpq	$0, %rdi
+	jz	.__error_null_string
+	xorq	%rdi, %rdi
+
+.__1_main_loop:
 	#
-	# RAX is gonna hold the address of current
-	# character begin read, the character itself
-	# is going to be stored into RDI
+	# Making sure there's still space enough
+	# to keep writing into the buffer
 	#
+	movq	-28(%rbp), %rax
+	cmpq	.BufferSize(%rip), %rax
+	jz	.__error_buffer_overflow
+	# -*-
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
 	cmpb	$0, %dil
-	jz	.__0_return
+	jz	.__1_return
+	# -*-
 	cmpb	$'%', %dil
-	jz	.__0_fmt_found
-	#
-	# If no format is found then the last character
-	# read shall be stored into the buffer
-	#
+	jz	.__1_format_found
+	# -*-
 	movb	%dil, (%r8)
-	incq	-20(%rbp)
-	jmp	.__0_inc_and_continue
-.__0_fmt_found:
+	incq	-28(%rbp)
+	jmp	.__1_continue
+
+.__1_format_found:
+	#
+	# The format indicator is right after the % symbol, therefore
+	# we need to go one character further to get it
+	#
 	incq	-8(%rbp)
+.__1_format_found_but_what:
 	movq	-8(%rbp), %rax
 	movzbl	(%rax), %edi
-	#
-	# Parsing percentage (%)
-	#
+	# -*-
 	cmpb	$'%', %dil
-	jz	.__0_parse_per
-	#
-	# Parsing character (c)
-	#
+	jz	.__1_format_percentage
+	# -*-
+	cmpb	$'<', %dil
+	jz	.__1_format_justify
+	# -*-
+	cmpb	$'>', %dil
+	jz	.__1_format_justify
+	# -*-
 	cmpb	$'c', %dil
-	jz	.__0_parse_chr
-	#
-	# Parsing string (s)
-	#
-	cmpb	$'s', %dil
-	jz	.__0_parse_str
-	cmpb	$'d', %dil
-	jz	.__0_indicate_dec
-	cmpb	$'b', %dil
-	jz	.__0_indicate_bin
-	cmpb	$'x', %dil
-	jz	.__0_indicate_hex
-	cmpb	$'o', %dil
-	jz	.__0_indicate_oct
-	jmp	.__fatal__unknown_format
-.__0_parse_per:
+	jz	.__1_format_character
+
+	jmp	.__error_unknonwn_format
+
+.__1_format_percentage:
 	movb	$'%', (%r8)
-	incq	-20(%rbp)
-	jmp	.__0_inc_and_continue
-.__0_parse_chr:
+	incq	-28(%rbp)
+	jmp	.__1_continue
+
+.__1_format_justify:
+	movw	%di, -30(%rbp)
+	#
+	# When the program gets here, the current character being
+	# read is < or >, after that is the justify number (what we want)
+	#
+	incq	-8(%rbp)
+	movq	-8(%rbp), %rdi
+	call	.__fx_get_just_num
+	movw	%ax, -32(%rbp)
+	addq	%rcx, -8(%rbp)
+	jmp	.__1_format_found_but_what
+
+.__1_format_character:
 	GETARG
 	movb	%r9b, (%r8)
-	incq	-20(%rbp)
-	jmp	.__0_inc_and_continue
-.__0_parse_str:
-	GETARG
-	movq	-20(%rbp), %rcx
-.__0_str_loop:
-	#
-	# Making sure there is not any buffer overflow
-	#
-	cmpq	.buffer_length(%rip), %rcx
-	jz	.__fatal__buffer_overflow
-	movzbl	(%r9), %edi
-	cmpb	$0, %dil
-	jz	.__0_str_fini
-	movb	%dil, (%r8)
-	incq	%r9
-	incq	%r8
-	incq	-20(%rbp)
-	jmp	.__0_str_loop
-.__0_str_fini:
-	decq	%r8
-	jmp	.__0_inc_and_continue
-.__0_indicate_dec:
-	jmp	.__0_parse_number
-.__0_indicate_bin:
-	PREFIX	$'b'
-	jmp	.__0_parse_number
-.__0_indicate_hex:
-	PREFIX	$'x'
-	jmp	.__0_parse_number
-.__0_indicate_oct:
-	PREFIX	$'o'
-	jmp	.__0_parse_number
-.__0_parse_number:
-	GETARG
-	cmpq	$0, %r9
-	jz	.__0_num_zero
-.__0_num_zero:
-	movb	$'0', (%r8)
-	incq	-20(%rbp)
-	jmp	.__0_inc_and_continue
+	incq	-28(%rbp)
+	jmp	.__1_continue
+	# XXX: here!
 
-	
-.__0_inc_and_continue:
-	incq	%r8
+.__1_continue:
+	#
+	# Prepares the next character to be read into -8(%rbp) (formatted string)
+	# and go to next byte into buffer to be written (R8)
+	#
 	incq	-8(%rbp)
-	jmp	.__0_loop
+	incq	%r8
+	#
+	# Formating justify flag
+	#
+	movw	$0, -32(%rbp)
+	jmp	.__1_main_loop
 
-.__0_return:
-	movq	-20(%rbp), %rdx
-	leaq	.buffer(%rip), %rsi
+.__1_return:
+	movq	-28(%rbp), %rdx
 	xorq	%rdi, %rdi
 	movl	-12(%rbp), %edi
+	leaq	.Buffer(%rip), %rsi
 	movq	$1, %rax
 	syscall
-	#
-	# TODO: clean and get ready for next call
-	#
+
 	movq	%rdx, %rax
 	leave
 	ret
 
+.__fx_get_just_num:
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$16, %rsp
+	#
+	# Stack distribution
+	#  -8: number of bytes ran
+	# -16: jutify number (return value)
+	#
+	movq	$0, -8(%rbp)
+	movq	$0, -16(%rbp)
+	#
+	# Padding can also be given via stack
+	#
+	xorq	%rax, %rax
+	movzbl	(%rdi), %eax
+	cmpb	$'*', %al
+	jz	.__2_was_pushed
+.__2_loop:
+	#
+	# No fucking way you're gonna have
+	# a padding of 256+ bytes
+	#
+	movq	-8(%rbp), %rcx
+	cmpq	$4, %rcx
+	jz	.__error_huge_justify
+	# -*-
+	movzbl	(%rdi), %eax
+	cmpb	$'0', %al
+	jl	.__2_nonumber
+	cmpb	$'9', %al
+	jg	.__2_nonumber
+	# -*-
+	incq	-8(%rbp)
+	incq	%rdi
+	jmp	.__2_loop
+.__2_nonumber:
+	movq	-8(%rbp), %rax
+	#
+	# Setting back rdi to where numbers start
+	#
+	subq	%rax, %rdi
+	#
+	# Setting the -16(%rbp)th 10 power
+	#
+	decq	%rax
+	movq	$8, %rbx
+	mulq	%rbx
+	leaq	.DecSys(%rip), %r9
+	addq	%rax, %r9
+	# -*-
+	xorq	%rcx, %rcx
+	xorq	%rax, %rax
+.__2_build_num:
+	cmpq	-8(%rbp), %rcx
+	jz	.__2_return
+	# -*-
+	movzbl	(%rdi), %eax
+	cltq
+	subq	$'0', %rax
+	movq	(%r9), %rbx
+	mulq	%rbx
+	addq	%rax, -16(%rbp)
+	subq	$8, %r9
+	incq	%rcx
+	incq	%rdi
+	jmp	.__2_build_num
+.__2_was_pushed:
+	movq	$-1, %rax
+	leave
+	ret
+.__2_return:
+	movq	-16(%rbp), %rax
+	movq	-8(%rbp),  %rcx
+	leave
+	ret
 
-.__fatal__buffer_overflow:
-	WRITER	.e_buf_overflow_msg(%rip), .e_buf_overflow_len(%rip)
+# %>2s
+# " 4"
+# 
+# %<2s
+# "4 "
+
+
+
+
+
+
+
+
+
+
+
+.__error_null_string:
 	EXIT	$-1
-.__fatal__unknown_format:
-	WRITER	.e_unknown_format_msg(%rip), .e_unknown_format_len(%rip)
-	EXIT	$-1
+.__error_buffer_overflow:
+	EXIT	$-2
+.__error_unknonwn_format:
+	EXIT	$-3
+.__error_huge_justify:
+	EXIT	$-4

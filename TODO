@@ -1,16 +1,16 @@
+    To-do List
 
-    * print non-formated strings                    ok
-    * (format) percentage signs              (%)    ok
-    * (format) characters                    (c)    ok
-    * (format) serie of characters           (s)    ok
-    * (format) decimal system                (i)
-    * (format) binary system                 (b)
-    * (format) octal system                  (o)
-    * (format) hexadecimal system            (x)
-    * (format) addresses                     (a)
-    * (format) as exponential                (e)
-    * (format) boolean values                (B)
-    * (format) real number values            (r)
-    * (flag)   left justify                  (-)
-    * (flag)   right justify                 (+)
+    - [x]  Print simple strings (no formatted ones)
+    - [x]  Check buffer bounds
+    - [x]  Print % character (%)
+    - [ ]  Implement justify (right & left)
+    - [x]  Implement %c
+    - [ ]  Implement %s
+    - [ ]  Implement number formatting (d, x, b, o)
+    - [ ]  Implement addresses formatting
+    - [ ]  Implement Boolean values
+    - [ ]  Implement real numbers formatting (f)
+    - [ ]  Implement exponential formatting (F)
+    - [ ]  Handle all possible errors (even system level ones)
+    - [ ]  Implement unit tests
 

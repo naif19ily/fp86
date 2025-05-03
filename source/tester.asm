@@ -7,23 +7,21 @@
 # |::.|   |::.|         |::.. . |::.. . |
 # `---'   `---'         `-------`-------'
 #
-# Tester file, do not include this file into
-# your project ;)
-#
 
 .section .rodata
-        .fmt: .string "> %b\n"
-	.cat: .string "1"
+	.fmt: .string "naif19il%<5c\n"
 
 .section .text
+
 
 .globl _start
 
 _start:
-        pushq   $0
-        leaq    .fmt(%rip), %rdi
-        movl    $1, %esi
-        call    FPx86
-        movq    %rax, %rdi
-        movq    $60, %rax
-        syscall
+	pushq	$'y'
+	leaq	.fmt(%rip), %rdi
+	movl	$1, %esi
+	call	FPx86
+
+	movq	%rax, %rdi
+	movq	$60, %rax
+	syscall
