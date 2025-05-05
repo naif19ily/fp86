@@ -9,7 +9,7 @@
 #
 
 .section .rodata
-	msg: .string "hola como estas\n"
+	msg: .string "%<12\n"
 
 .section .text
 

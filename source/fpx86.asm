@@ -44,6 +44,11 @@
 	syscall
 .endm
 
+.macro ADVBUF
+	incq	%r9
+	incq	-72(%rbp)
+.endm
+
 .globl __fpx86
 
 __fpx86:
@@ -56,6 +61,7 @@ __fpx86:
 	# Local variables:
 	#  -72: number of bytes written in buffer
 	#  -76: file descriptor
+	#  -78: type of justificaion (either < or >)
 	#
 	movq	$0, -72(%rbp)
 	movl	%esi, -76(%rbp)
@@ -79,18 +85,40 @@ __fpx86:
 	# -*-*-
 	cmpb	$'%', %dil
 	jz	.__0_format_found
-
+	# -*-*-
 	movb	%dil, (%r9)
-	incq	%r9
-	incq	-72(%rbp)
+	ADVBUF
 	jmp	.__0_continue
-
 .__0_format_found:
+	# if the program hits this point r8 will be pointing to %
+	# the program needs what comes after that
+	incq	%r8
+	movzbl	(%r8), %edi
+	# -*-*-
+	cmp	$'%', %dil
+	jz	.__0_fmt_per
+	# -*-*-
+	cmp	$'<', %dil
+	jz	.__0_fmt_jutify
+	# -*-*-
+	cmp	$'>', %dil
+	jz	.__0_fmt_jutify
+
+
+	jmp	.__fatal_unknown_buf
+.__0_fmt_per:
+	# formatting % is like adding any other character, it's
+	# just a special one...
+	movb	$'%', (%r9)
+	ADVBUF
+	jmp	.__0_continue
+.__0_fmt_jutify:
+	movb	%dil, -78(%rbp)
+	call	.__fx_get_justif_number
 
 .__0_continue:
 	incq	%r8
 	jmp	.__0_loop
-
 .__0_fini:
 	# Printing the final buffer via write syscall, how else?
 	movq	-72(%rbp), %rdx
@@ -105,5 +133,51 @@ __fpx86:
 	leave
 	ret
 
+.__fx_get_justif_number:
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$8, %rsp
+	#
+	# Local variables:
+	#   -8: return value
+	#  -16: number's length (bytes ran)
+	#
+	movq	$0, -8(%rbp)
+	movq	$0, -16(%rbp)
+	# -*-*-
+	incq	%r8
+	movzbl	(%r8), %edi
+	# if justificaion is given via stack, it is specified
+	# by giving a * instead of a raw number
+	cmpb	$'*', %dil
+	jz	.__1_given_via_stack
+.__1_loop:
+	# Getting character with an offset of -16(%rbp) since the first
+	# number found
+	movq	%r8, %rax
+	addq	-16(%rbp), %rax
+	movzbl	(%rax), %edi
+	# -*-*-
+	cmpb	$'0', %dil
+	jl	.__1_num_fini
+	cmpb	$'9', %dil
+	jg	.__1_num_fini
+	incq	-16(%rbp)
+	jmp	.__1_loop
+.__1_num_fini:
+	EXIT	-16(%rbp)
+
+.__1_given_via_stack:
+	movq	$-1, %rax
+	leave
+	ret
+.__1_fini:
+	movq	-8(%rbp), %rax
+	leave
+	ret
+
+
 .__fatal_buf_overflow:
 	EXIT	$-1
+.__fatal_unknown_buf:
+	EXIT	$-2
