@@ -9,18 +9,16 @@
 #
 
 .section .rodata
-	.fmt: .string "naif19il%<5c\n"
+	msg: .string "hola como estas\n"
 
 .section .text
-
 
 .globl _start
 
 _start:
-	pushq	$'y'
-	leaq	.fmt(%rip), %rdi
+	leaq	msg(%rip), %rdi
 	movl	$1, %esi
-	call	FPx86
+	call	__fpx86
 
 	movq	%rax, %rdi
 	movq	$60, %rax
