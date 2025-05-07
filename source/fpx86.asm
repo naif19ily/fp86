@@ -157,10 +157,14 @@ __fpx86:
 	jmp	.__0_format_found
 .__0_fmt_char:
 	GETARG
-	leaq	(%r10), %r10
-	movq	$-1, %rdi
-	leaq	-72(%rbp), %rsi
-	call	.__fx_write_argument
+
+	xorq	%rdi, %rdi
+	movw	-78(%rbp), %di
+	movq	-86(%rbp), %rsi					# padding
+	movq	$0, %rcx					# argument's length
+	leaq	-72(%rbp), %rdx
+
+	call	.__fx_handle_padding
 
 .__0_continue:
 	incq	%r8
@@ -266,7 +270,7 @@ __fpx86:
 	movq	%rdi, -8(%rbp)
 	movq	$0, -16(%rbp)
 	# -*-*-
-	cmpq	$-1, %rdi
+	cmpq	$0, %rdi
 	jz	.__2_is_char
 	# RSI register is a pointer to the number of bytes
 	# written in the buffer so far
@@ -303,7 +307,33 @@ __fpx86:
 .__2_fini:
 	leave
 	ret
-	
+
+.__fx_handle_padding:
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$16, %rsp
+	#
+	# Local variables:
+	#  -8: argument's length
+	# -16: number of bytes written (pointer)
+	#
+	movq	%rcx, -8(%rbp)
+	movq	%rdx, -16(%rbp)
+	# -*-*-
+	cmpw	$0, %di
+	jz	.__3_write
+	# maybe there is some padding, however, if the padding
+	# is not enough, then the whole argument will be written anyway
+	subq	%rcx, %rsi
+	js	.__3_write
+
+.__3_write:
+	movq	-8(%rbp), %rdi
+	movq	-16(%rbp), %rsi
+	call	.__fx_write_argument
+	# -*-*-
+	leave
+	ret
 
 
 .__fatal_buf_overflow:
