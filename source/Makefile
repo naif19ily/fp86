@@ -18,4 +18,4 @@ $(name): $(objs)
 %.o: %.asm
 	as	$< -o $@
 clean:
-	rm	-rf $(objs)
+	rm	-rf $(objs) $(name)

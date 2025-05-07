@@ -9,13 +9,16 @@
 #
 
 .section .rodata
-	msg: .string "%<12\n"
+	msg: .string "%c %c %c\n"
 
 .section .text
 
 .globl _start
 
 _start:
+	pushq	$97
+	pushq	$98
+	pushq	$99
 	leaq	msg(%rip), %rdi
 	movl	$1, %esi
 	call	__fpx86
