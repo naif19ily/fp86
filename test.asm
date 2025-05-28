@@ -1,5 +1,5 @@
 .section .rodata
-	.message: .string "simple string\n"
+	.message: .string "1%%2\n"
 
 .section .text
 
@@ -9,6 +9,6 @@ _start:
 	leaq	.message(%rip), %rdi
 	movl	$1, %esi
 	call	fp86
+	movq	%rax, %rdi
 	movq	$60, %rax
-	movq	$0, %rdi
 	syscall

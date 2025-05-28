@@ -34,18 +34,27 @@
 	movq	-64(%rbp), %r15
 .endm
 
+.macro GA
+	movq	-80(%rbp), %rax
+	movq	(%rbp, %rax), %r15
+	addq	$8, -80(%rbp)
+.endm
+
 .globl fp86
 
 fp86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$72, %rsp
+	subq	$80, %rsp
 	SR
 
 	movq	%rdi, %r8					# format string's placeholder
 	leaq	.BF(%rip), %r9					# buffer's placeholder
 	movq	$0, %r10					# number of bytes written
 	movl	%esi, -68(%rbp)					# file descriptor given
+	movw	$0, -70(%rbp)					# indentation-kind (< or >)
+	movw	$0, -72(%rbp)					# indentation width
+	movq	$16, -80(%rbp)					# next argument's offset to rbp
 
 	xorq	%rax, %rax
 	xorq	%rdi, %rdi
@@ -68,7 +77,33 @@ fp86:
 	jmp	.resume
 
 .format_0:
+	incq	%r8
+	movzbl	(%r8), %edi
+	cmpb	$'%', %dil
+	jz	.format_per
 
+	cmpb	$'<', %dil
+	jz	.format_ind
+
+	cmpb	$'>', %dil
+	jz	.format_ind
+
+.format_1:
+	jmp	.fatal_1
+
+.format_ind:
+	movw	%di, -70(%rbp)
+	GA
+	movw	%r15w, -72(%rbp)
+	incq	%r8
+	movzbl	(%r8), %edi
+	jmp	.format_1
+
+.format_per:
+	movb	$'%', (%r9)
+	incq	%r9
+	incq	%r10
+	jmp	.resume
 
 .resume:
 	incq	%r8
@@ -90,3 +125,6 @@ fp86:
 
 .fatal_0:
 	EX	$-1
+
+.fatal_1:
+	EX	$-2
