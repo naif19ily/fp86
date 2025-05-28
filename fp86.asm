@@ -1,8 +1,9 @@
 .section .rodata
-	.BL: .quad 4096
+	.BL: .quad 2048
 
 .section .bss
-	.BF: .zero 4096
+	.BF: .zero 2048
+	.BA: .zero 2048
 
 .section .text
 
@@ -55,6 +56,8 @@ fp86:
 	movw	$0, -70(%rbp)					# indentation-kind (< or >)
 	movw	$0, -72(%rbp)					# indentation width
 	movq	$16, -80(%rbp)					# next argument's offset to rbp
+	leaq	.BA(%rip), %r11					# argument buffer's placeholder
+	movq	$0, %r12					# argument's length
 
 	xorq	%rax, %rax
 	xorq	%rdi, %rdi
@@ -77,6 +80,9 @@ fp86:
 	jmp	.resume
 
 .format_0:
+	leaq	.BA(%rip), %r11
+	movq	$0, %r12
+
 	incq	%r8
 	movzbl	(%r8), %edi
 	cmpb	$'%', %dil
@@ -89,6 +95,9 @@ fp86:
 	jz	.format_ind
 
 .format_1:
+	cmpb	$'c', %dil
+	jz	.format_chr
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -105,10 +114,32 @@ fp86:
 	incq	%r10
 	jmp	.resume
 
+.format_chr:
+	GA
+	movb	%r15b, (%r11)
+	movq	$1, %r12
+	jmp	.write_ba
+
+.write_ba:
+	xorq	%rcx, %rcx
+	xorq	%rax, %rax
+
+.write_ba_loop:
+	cmpq	%rcx, %r12
+	jz	.resume
+
+	movb	(%r11), %al
+	movb	%al, (%r9)
+
+	incq	%r9
+	incq	%r10
+
+	incq	%rcx
+	jmp	.write_ba_loop
+
 .resume:
 	incq	%r8
 	jmp	.loop
-
 
 .fini:
 	movq	$1, %rax
