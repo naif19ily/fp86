@@ -1,0 +1,92 @@
+.section .rodata
+	.BL: .quad 4096
+
+.section .bss
+	.BF: .zero 4096
+
+.section .text
+
+.macro EX status
+	movq	\status, %rdi
+	movq	$60, %rax
+	syscall
+.endm
+
+.macro SR
+	movq	%r8 , -8(%rbp)
+	movq	%r9 , -16(%rbp)
+	movq	%r10, -24(%rbp)
+	movq	%r11, -32(%rbp)
+	movq	%r12, -40(%rbp)
+	movq	%r13, -48(%rbp)
+	movq	%r14, -56(%rbp)
+	movq	%r15, -64(%rbp)
+.endm
+
+.macro BR
+	movq	-8(%rbp) , %r8
+	movq	-16(%rbp), %r9
+	movq	-24(%rbp), %r10
+	movq	-32(%rbp), %r11
+	movq	-40(%rbp), %r12
+	movq	-48(%rbp), %r13
+	movq	-56(%rbp), %r14
+	movq	-64(%rbp), %r15
+.endm
+
+.globl fp86
+
+fp86:
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$72, %rsp
+	SR
+
+	movq	%rdi, %r8					# format string's placeholder
+	leaq	.BF(%rip), %r9					# buffer's placeholder
+	movq	$0, %r10					# number of bytes written
+	movl	%esi, -68(%rbp)					# file descriptor given
+
+	xorq	%rax, %rax
+	xorq	%rdi, %rdi
+	xorq	%rsi, %rsi
+
+.loop:
+	cmpb	$0, (%r8)
+	jz	.fini
+	movzbl	(%r8), %edi
+
+	cmpq	.BL(%rip), %r10
+	jz	.fatal_0
+
+	cmpb	$'%', %dil
+	jz	.format_0
+
+	movb	%dil, (%r9)
+	incq	%r9
+	incq	%r10
+	jmp	.resume
+
+.format_0:
+
+
+.resume:
+	incq	%r8
+	jmp	.loop
+
+
+.fini:
+	movq	$1, %rax
+	xorq	%rdi, %rdi
+	movl	-68(%rbp), %edi
+	leaq	.BF(%rip), %rsi
+	movq	%r10, %rdx
+	syscall
+
+	movq	%r10, %rax
+	BR
+	leave
+	ret
+
+.fatal_0:
+	EX	$-1
