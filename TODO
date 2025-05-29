@@ -4,4 +4,4 @@
     - print simple strings                          (3bd0240)
     - parse double percentage sign                  (3bd0240)
     - character formatting                          (49f2999)
-    - implement justification
+    - implement justification [unoptimized]         (0f24efb)

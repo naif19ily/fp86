@@ -125,30 +125,34 @@ fp86:
 	xorq	%rax, %rax
 
 	cmpw	$0, -70(%rbp)
-	jz	.write_ba_loop
+	jz	.write_arg
 
 	cmpw	$'>', -70(%rbp)
-	jz	.ri
+	jz	.indent_r
 
-	jmp	.write_ba_loop
+	jmp	.write_arg
 
-.ri:
+.indent_r:
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
-	js	.write_ba_loop					# TODO: debug
+	js	.write_arg					# TODO: debug
+	leaq	.write_arg(%rip), %rcx
 
-.ri_loop:							# TODO: check bounds here
+.indentation:							# TODO: check bounds
 	cmpw	$0, %bx
-	jz	.write_ba_loop
+	jnz	.indentation_s
+	jmp	*%rcx
+
+.indentation_s:
 	movb	$' ', (%r9)
 	incq	%r9
 	incq	%r10
 	decw	%bx
-	jmp	.ri_loop
+	jmp	.indentation
 	
-.write_ba_loop:
+.write_arg:
 	cmpq	%rcx, %r12
-	jz	.write_ba_check
+	jz	.warg_final
 
 	movb	(%r11), %al
 	movb	%al, (%r9)
@@ -157,25 +161,16 @@ fp86:
 	incq	%r10
 
 	incq	%rcx
-	jmp	.write_ba_loop
+	jmp	.write_arg
 
-.write_ba_check:
+.warg_final:
 	cmpw	$'<', -70(%rbp)
 	jnz	.resume
 
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
-
-.li:								# Todo: check bounds here
-	cmpw	$0, %bx
-	jz	.resume
-	movb	$' ', (%r9)
-	incq	%r9
-	incq	%r10
-	decw	%bx
-	jmp	.li
-	
-
+	leaq	.resume(%rip), %rcx
+	jmp	.indentation
 
 .resume:
 	incq	%r8

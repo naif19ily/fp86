@@ -7,7 +7,7 @@
 
 _start:
 	pushq	$'2'
-	pushq	$2
+	pushq	$3
 
 	leaq	.message(%rip), %rdi
 	movl	$1, %esi
