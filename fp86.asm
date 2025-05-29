@@ -98,6 +98,9 @@ fp86:
 	cmpb	$'c', %dil
 	jz	.format_chr
 
+	cmpb	$'s', %dil
+	jz	.format_str
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -120,12 +123,23 @@ fp86:
 	movq	$1, %r12
 	jmp	.write_ba
 
+.format_str:
+	GA
+	xorq	%rdi, %rdi
+.f_str:
+	movzbl	(%r15), %edi
+	cmpb	$0, %dil
+	jz	.write_ba
+
+	movb	%dil, (%r11, %r12)
+	incq	%r12
+	incq	%r15
+
+	jmp	.f_str
+
 .write_ba:
 	xorq	%rcx, %rcx
 	xorq	%rax, %rax
-
-	cmpw	$0, -70(%rbp)
-	jz	.write_arg
 
 	cmpw	$'>', -70(%rbp)
 	jz	.indent_r
@@ -138,12 +152,15 @@ fp86:
 	js	.write_arg					# TODO: debug
 	leaq	.write_arg(%rip), %rcx
 
-.indentation:							# TODO: check bounds
+.indentation:
 	cmpw	$0, %bx
 	jnz	.indentation_s
 	jmp	*%rcx
 
 .indentation_s:
+	cmpq	.BL(%rip), %r10
+	jz	.fatal_0
+
 	movb	$' ', (%r9)
 	incq	%r9
 	incq	%r10
@@ -154,7 +171,7 @@ fp86:
 	cmpq	%rcx, %r12
 	jz	.warg_final
 
-	movb	(%r11), %al
+	movb	(%r11, %rcx), %al
 	movb	%al, (%r9)
 
 	incq	%r9

@@ -1,12 +1,14 @@
 .section .rodata
-	.message: .string "1%<c3\n"
+	.message: .string "for %<smood\n"
+	.st: .string "da"
 
 .section .text
 
 .globl _start
 
 _start:
-	pushq	$'2'
+	leaq	.st(%rip), %rax
+	pushq	%rax
 	pushq	$3
 
 	leaq	.message(%rip), %rdi
