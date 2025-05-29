@@ -124,9 +124,31 @@ fp86:
 	xorq	%rcx, %rcx
 	xorq	%rax, %rax
 
+	cmpw	$0, -70(%rbp)
+	jz	.write_ba_loop
+
+	cmpw	$'>', -70(%rbp)
+	jz	.ri
+
+	jmp	.write_ba_loop
+
+.ri:
+	movw	-72(%rbp), %bx
+	subw	%r12w, %bx
+	js	.write_ba_loop					# TODO: debug
+
+.ri_loop:							# TODO: check bounds here
+	cmpw	$0, %bx
+	jz	.write_ba_loop
+	movb	$' ', (%r9)
+	incq	%r9
+	incq	%r10
+	decw	%bx
+	jmp	.ri_loop
+	
 .write_ba_loop:
 	cmpq	%rcx, %r12
-	jz	.resume
+	jz	.write_ba_check
 
 	movb	(%r11), %al
 	movb	%al, (%r9)
@@ -136,6 +158,24 @@ fp86:
 
 	incq	%rcx
 	jmp	.write_ba_loop
+
+.write_ba_check:
+	cmpw	$'<', -70(%rbp)
+	jnz	.resume
+
+	movw	-72(%rbp), %bx
+	subw	%r12w, %bx
+
+.li:								# Todo: check bounds here
+	cmpw	$0, %bx
+	jz	.resume
+	movb	$' ', (%r9)
+	incq	%r9
+	incq	%r10
+	decw	%bx
+	jmp	.li
+	
+
 
 .resume:
 	incq	%r8
