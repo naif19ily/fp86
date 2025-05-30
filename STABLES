@@ -1,0 +1,11 @@
+
+    stable 1: 885d86e
+    all working fine, got implemented correctly:
+     - double percentage
+     - formatting decimals
+     - formatting characters
+     - formatting strings
+     - left indentation
+     - right indentation
+     - buffer overflow handling
+     - unknown formatting handling

@@ -107,6 +107,9 @@ fp86:
 	cmpb	$'d', %dil
 	jz	.fdec_init
 
+	cmpb	$'x', %dil
+	jz	.fhex_init
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -179,6 +182,38 @@ fp86:
 .fdec_term:
 	incq	%r11
 	jmp	.buf_trans
+
+#
+# Hexadecimal formatting:
+#
+.fhex_init:
+	GA
+	movq	%r15, %rax
+	leaq	.BA(%rip), %r11
+	addq	.BL(%rip), %r11
+	decq	%r11
+.fhex_loop:
+	cmpq	$0, %rax
+	jz	.fhex_term
+	movq	$16, %rbx
+	xorq	%rdx, %rdx
+	divq	%rbx
+	cmpq	$10, %rdx
+	jl	.fhex_c1
+	addb	$'7', %dl
+	jmp	.fhex_put
+.fhex_c1:
+	addb	$'0', %dl
+	jmp	.fhex_put
+.fhex_put:
+	movb	%dl, (%r11)
+	decq	%r11
+	incq	%r12
+	jmp	.fhex_loop
+.fhex_term:
+	incq	%r11
+	jmp	.buf_trans
+
 
 #
 # Writing buffer argument into printable buffer:
