@@ -6,4 +6,12 @@
     - character formatting                          (49f2999)
     - implement justification [unoptimized]         (0f24efb)
     - implmenet justification [optimized]           (48b13dc)
-    - support strings
+    - support strings                               (97ee382)
+    - support integers (decimal)
+    - support integers (hexadecimal)
+    - support integers (binary)
+    - support integers (octal)
+    - support "boolean"
+    - support addresses
+    - support floating numbers (insane)
+

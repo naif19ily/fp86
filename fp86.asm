@@ -101,6 +101,9 @@ fp86:
 	cmpb	$'s', %dil
 	jz	.format_str
 
+	cmpb	$'d', %dil
+	jz	.format_num
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -126,6 +129,7 @@ fp86:
 .format_str:
 	GA
 	xorq	%rdi, %rdi
+
 .f_str:
 	movzbl	(%r15), %edi
 	cmpb	$0, %dil
@@ -136,6 +140,30 @@ fp86:
 	incq	%r15
 
 	jmp	.f_str
+
+#
+# Number formatting:
+#
+.format_num:
+	GA
+	movq	%r15, %rax
+	xorq	%rdx, %rdx
+	leaq	.BA(%rip), %r11
+	addq	.BL(%rip), %r11
+	decq	%r11
+.fnum_loop:
+	cmpq	$0, %rax
+	jz	.fnum_term
+	movq	$10, %rbx
+	divq	%rbx
+	addb	$'0', %dl
+	movb	%dl, (%r11)
+	decq	%r11
+	incq	%r12
+	jmp	.fnum_loop
+.fnum_term:
+	incq	%r11
+	jmp	.write_ba
 
 .write_ba:
 	xorq	%rcx, %rcx
