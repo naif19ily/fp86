@@ -104,11 +104,11 @@ fp86:
 	cmpb	$'s', %dil
 	jz	.fstr_init
 
-	cmpb	$'d', %dil
-	jz	.fdec_init
-
 	cmpb	$'x', %dil
 	jz	.fhex_init
+
+	cmpb	$'d', %dil
+	jz	.fdec_init
 
 	cmpb	$'b', %dil
 	jz	.fbin_init
@@ -166,26 +166,33 @@ fp86:
 	jmp	.buf_trans
 
 #
-# Decimal formatting:
+# Decimal, Binary and Octal formatting:
 #
 .fdec_init:
+	movq	$10, %rbx
+	jmp	.fdbo_init
+.fbin_init:
+	movq	$2, %rbx
+	jmp	.fdbo_init
+.foct_init:
+	movq	$8, %rbx
+.fdbo_init:
 	GA
 	movq	%r15, %rax
 	leaq	.BA(%rip), %r11
 	addq	.BL(%rip), %r11
 	decq	%r11
-.fdec_loop:
+.fdbo_loop:
 	cmpq	$0, %rax
-	jz	.fdec_term
-	movq	$10, %rbx
+	jz	.fdbo_term
 	xorq	%rdx, %rdx
 	divq	%rbx
 	addb	$'0', %dl
 	movb	%dl, (%r11)
 	decq	%r11
 	incq	%r12
-	jmp	.fdec_loop
-.fdec_term:
+	jmp	.fdbo_loop
+.fdbo_term:
 	incq	%r11
 	jmp	.buf_trans
 
@@ -219,56 +226,6 @@ fp86:
 .fhex_term:
 	incq	%r11
 	jmp	.buf_trans
-
-
-#
-# Binary formatting:
-#
-.fbin_init:
-	GA
-	movq	%r15, %rax
-	leaq	.BA(%rip), %r11
-	addq	.BL(%rip), %r11
-	decq	%r11
-.fbin_loop:
-	cmpq	$0, %rax
-	jz	.fbin_term
-	movq	$2, %rbx
-	xorq	%rdx, %rdx
-	divq	%rbx
-	addb	$'0', %dl
-	movb	%dl, (%r11)
-	decq	%r11
-	incq	%r12
-	jmp	.fbin_loop
-.fbin_term:
-	incq	%r11
-	jmp	.buf_trans
-
-#
-# Octal formatting:
-#
-.foct_init:
-	GA
-	movq	%r15, %rax
-	leaq	.BA(%rip), %r11
-	addq	.BL(%rip), %r11
-	decq	%r11
-.foct_loop:
-	cmpq	$0, %rax
-	jz	.foct_term
-	movq	$8, %rbx
-	xorq	%rdx, %rdx
-	divq	%rbx
-	addb	$'0', %dl
-	movb	%dl, (%r11)
-	decq	%r11
-	incq	%r12
-	jmp	.foct_loop
-.foct_term:
-	incq	%r11
-	jmp	.buf_trans
-
 
 #
 # Writing buffer argument into printable buffer:

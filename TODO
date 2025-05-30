@@ -9,8 +9,8 @@
     - support strings                               (97ee382)
     - support integers (decimal)                    (8210790)
     - support integers (hexadecimal)                (c9356fe)
-    - support integers (binary)
-    - support integers (octal)
+    - support integers (binary)                     (8c4b5f7)
+    - support integers (octal)                      (8c4b5f7)
     - support "boolean"
     - support addresses
     - support floating numbers (insane)
