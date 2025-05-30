@@ -83,6 +83,9 @@ fp86:
 	leaq	.BA(%rip), %r11
 	movq	$0, %r12
 
+	movw	$0, -70(%rbp)
+	movw	$0, -72(%rbp)
+
 	incq	%r8
 	movzbl	(%r8), %edi
 	cmpb	$'%', %dil
@@ -189,8 +192,11 @@ fp86:
 .buft_right_ind:
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
-	js	.buft_write					# TODO: debug
-	leaq	.buft_write(%rip), %rcx
+
+	cmpw	$0, %bx
+	jle	.buft_write					# TODO: debug
+
+	leaq	.buft_write_init(%rip), %rcx
 .buft_ind_cond:
 	cmpw	$0, %bx
 	jnz	.buft_ind_loop
@@ -202,7 +208,9 @@ fp86:
 	incq	%r9
 	incq	%r10
 	decw	%bx
-	jmp	.buft_ind_cond	
+	jmp	.buft_ind_cond
+.buft_write_init:
+	xorq	%rcx, %rcx
 .buft_write:
 	cmpq	%rcx, %r12
 	jz	.buft_write_term
