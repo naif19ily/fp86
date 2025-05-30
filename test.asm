@@ -1,15 +1,19 @@
 .section .rodata
-	.message: .string "for %<smood\n"
-	.st: .string "da"
+	.message: .string "%s%c%d\n"
+	.st: .string "hola"
 
 .section .text
 
 .globl _start
 
 _start:
-	leaq	.st(%rip), %rax
-	pushq	%rax
-	pushq	$3
+
+        pushq   $777
+
+        pushq   $'s'
+
+        leaq    .st(%rip), %rax
+        pushq   %rax
 
 	leaq	.message(%rip), %rdi
 	movl	$1, %esi

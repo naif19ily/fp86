@@ -159,7 +159,6 @@ fp86:
 .fdec_init:
 	GA
 	movq	%r15, %rax
-	xorq	%rdx, %rdx
 	leaq	.BA(%rip), %r11
 	addq	.BL(%rip), %r11
 	decq	%r11
@@ -167,6 +166,7 @@ fp86:
 	cmpq	$0, %rax
 	jz	.fdec_term
 	movq	$10, %rbx
+	xorq	%rdx, %rdx
 	divq	%rbx
 	addb	$'0', %dl
 	movb	%dl, (%r11)
