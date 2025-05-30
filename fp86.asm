@@ -125,6 +125,9 @@ fp86:
 	cmpb	$'B', %dil
 	jz	.fbol_init
 
+	cmpb	$'p', %dil
+	jz	.fhex_init
+
 	jmp	.fatal_1
 
 .format_ind:

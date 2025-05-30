@@ -1,5 +1,5 @@
 .section .rodata
-	.message: .string "%B\n"
+	.message: .string "0x%p\n"
 	.st: .string "hola"
 
 .section .text
@@ -7,8 +7,8 @@
 .globl _start
 
 _start:
-
-        pushq   $0
+	leaq	.st(%rip), %rax
+	pushq	%rax
 
 	leaq	.message(%rip), %rdi
 	movl	$1, %esi
