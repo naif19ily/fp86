@@ -86,7 +86,7 @@ fp86:
 	incq	%r8
 	movzbl	(%r8), %edi
 	cmpb	$'%', %dil
-	jz	.format_per
+	jz	.fper_init
 
 	cmpb	$'<', %dil
 	jz	.format_ind
@@ -96,13 +96,13 @@ fp86:
 
 .format_1:
 	cmpb	$'c', %dil
-	jz	.format_chr
+	jz	.fchr_init
 
 	cmpb	$'s', %dil
-	jz	.format_str
+	jz	.fstr_init
 
 	cmpb	$'d', %dil
-	jz	.format_num
+	jz	.fdec_init
 
 	jmp	.fatal_1
 
@@ -114,109 +114,115 @@ fp86:
 	movzbl	(%r8), %edi
 	jmp	.format_1
 
-.format_per:
+#
+# Percentage symbol formatting:
+#
+.fper_init:
+.fper_loop:
+.fper_term:
 	movb	$'%', (%r9)
 	incq	%r9
 	incq	%r10
 	jmp	.resume
 
-.format_chr:
+#
+# Character formatting:
+#
+.fchr_init:
 	GA
+.fchr_loop:
 	movb	%r15b, (%r11)
 	movq	$1, %r12
-	jmp	.write_ba
+.fchr_term:
+	jmp	.buf_trans
 
-.format_str:
+#
+# String formatting:
+#
+.fstr_init:
 	GA
 	xorq	%rdi, %rdi
-
-.f_str:
+.fstr_loop:
 	movzbl	(%r15), %edi
 	cmpb	$0, %dil
-	jz	.write_ba
-
+	jz	.fstr_term
 	movb	%dil, (%r11, %r12)
 	incq	%r12
 	incq	%r15
-
-	jmp	.f_str
+	jmp	.fstr_loop
+.fstr_term:
+	jmp	.buf_trans
 
 #
-# Number formatting:
+# Decimal formatting:
 #
-.format_num:
+.fdec_init:
 	GA
 	movq	%r15, %rax
 	xorq	%rdx, %rdx
 	leaq	.BA(%rip), %r11
 	addq	.BL(%rip), %r11
 	decq	%r11
-.fnum_loop:
+.fdec_loop:
 	cmpq	$0, %rax
-	jz	.fnum_term
+	jz	.fdec_term
 	movq	$10, %rbx
 	divq	%rbx
 	addb	$'0', %dl
 	movb	%dl, (%r11)
 	decq	%r11
 	incq	%r12
-	jmp	.fnum_loop
-.fnum_term:
+	jmp	.fdec_loop
+.fdec_term:
 	incq	%r11
-	jmp	.write_ba
+	jmp	.buf_trans
 
-.write_ba:
+#
+# Writing buffer argument into printable buffer:
+#
+.buf_trans:
 	xorq	%rcx, %rcx
 	xorq	%rax, %rax
-
 	cmpw	$'>', -70(%rbp)
-	jz	.indent_r
-
-	jmp	.write_arg
-
-.indent_r:
+	jz	.buft_right_ind
+	jmp	.buft_write
+.buft_right_ind:
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
-	js	.write_arg					# TODO: debug
-	leaq	.write_arg(%rip), %rcx
-
-.indentation:
+	js	.buft_write					# TODO: debug
+	leaq	.buft_write(%rip), %rcx
+.buft_ind_cond:
 	cmpw	$0, %bx
-	jnz	.indentation_s
+	jnz	.buft_ind_loop
 	jmp	*%rcx
-
-.indentation_s:
+.buft_ind_loop:
 	cmpq	.BL(%rip), %r10
 	jz	.fatal_0
-
 	movb	$' ', (%r9)
 	incq	%r9
 	incq	%r10
 	decw	%bx
-	jmp	.indentation
-	
-.write_arg:
+	jmp	.buft_ind_cond	
+.buft_write:
 	cmpq	%rcx, %r12
-	jz	.warg_final
-
+	jz	.buft_write_term
 	movb	(%r11, %rcx), %al
 	movb	%al, (%r9)
-
 	incq	%r9
 	incq	%r10
-
 	incq	%rcx
-	jmp	.write_arg
-
-.warg_final:
+	jmp	.buft_write
+.buft_write_term:
 	cmpw	$'<', -70(%rbp)
 	jnz	.resume
-
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
 	leaq	.resume(%rip), %rcx
-	jmp	.indentation
+	jmp	.buft_ind_cond
 
+#
+# Part of the main loop
+#
 .resume:
 	incq	%r8
 	jmp	.loop
@@ -228,12 +234,14 @@ fp86:
 	leaq	.BF(%rip), %rsi
 	movq	%r10, %rdx
 	syscall
-
 	movq	%r10, %rax
 	BR
 	leave
 	ret
 
+#
+# Error handling system:
+#
 .fatal_0:
 	EX	$-1
 
