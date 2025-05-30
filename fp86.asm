@@ -1,6 +1,12 @@
 .section .rodata
 	.BL: .quad 2048
 
+	.TRUE: .string  "TRUE"
+	.FALSE: .string "FALSE"
+
+	.TL: .quad 4
+	.FL: .quad 5
+
 .section .bss
 	.BF: .zero 2048
 	.BA: .zero 2048
@@ -116,6 +122,9 @@ fp86:
 	cmpb	$'o', %dil
 	jz	.foct_init
 
+	cmpb	$'B', %dil
+	jz	.fbol_init
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -228,6 +237,22 @@ fp86:
 	jmp	.buf_trans
 
 #
+# Boolean formatting:
+#
+.fbol_init:
+	GA
+	cmpq	$0, %r15
+	jz	.fbol_false
+	leaq	.TRUE(%rip), %r11
+	movq	.TL(%rip), %r12
+	jmp	.buf_trans
+.fbol_false:
+	leaq	.FALSE(%rip), %r11
+	movq	.FL(%rip), %r12
+	jmp	.buf_trans
+
+
+#
 # Writing buffer argument into printable buffer:
 #
 .buf_trans:
@@ -239,10 +264,8 @@ fp86:
 .buft_right_ind:
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
-
 	cmpw	$0, %bx
-	jle	.buft_write					# TODO: debug
-
+	jle	.buft_write
 	leaq	.buft_write_init(%rip), %rcx
 .buft_ind_cond:
 	cmpw	$0, %bx

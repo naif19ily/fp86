@@ -1,5 +1,5 @@
 
-    stable 1: 885d86e
+    Stable 1: 885d86e
     all working fine, got implemented correctly:
      - double percentage
      - formatting decimals
@@ -9,3 +9,9 @@
      - right indentation
      - buffer overflow handling
      - unknown formatting handling
+
+    Stable 2: d451bf2
+    all working fine, we added
+      - hexadecimal
+      - binary
+      - octal
