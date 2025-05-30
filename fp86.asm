@@ -110,6 +110,12 @@ fp86:
 	cmpb	$'x', %dil
 	jz	.fhex_init
 
+	cmpb	$'b', %dil
+	jz	.fbin_init
+
+	cmpb	$'o', %dil
+	jz	.foct_init
+
 	jmp	.fatal_1
 
 .format_ind:
@@ -211,6 +217,55 @@ fp86:
 	incq	%r12
 	jmp	.fhex_loop
 .fhex_term:
+	incq	%r11
+	jmp	.buf_trans
+
+
+#
+# Binary formatting:
+#
+.fbin_init:
+	GA
+	movq	%r15, %rax
+	leaq	.BA(%rip), %r11
+	addq	.BL(%rip), %r11
+	decq	%r11
+.fbin_loop:
+	cmpq	$0, %rax
+	jz	.fbin_term
+	movq	$2, %rbx
+	xorq	%rdx, %rdx
+	divq	%rbx
+	addb	$'0', %dl
+	movb	%dl, (%r11)
+	decq	%r11
+	incq	%r12
+	jmp	.fbin_loop
+.fbin_term:
+	incq	%r11
+	jmp	.buf_trans
+
+#
+# Octal formatting:
+#
+.foct_init:
+	GA
+	movq	%r15, %rax
+	leaq	.BA(%rip), %r11
+	addq	.BL(%rip), %r11
+	decq	%r11
+.foct_loop:
+	cmpq	$0, %rax
+	jz	.foct_term
+	movq	$8, %rbx
+	xorq	%rdx, %rdx
+	divq	%rbx
+	addb	$'0', %dl
+	movb	%dl, (%r11)
+	decq	%r11
+	incq	%r12
+	jmp	.foct_loop
+.foct_term:
 	incq	%r11
 	jmp	.buf_trans
 

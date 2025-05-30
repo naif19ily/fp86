@@ -8,7 +8,7 @@
     - implmenet justification [optimized]           (48b13dc)
     - support strings                               (97ee382)
     - support integers (decimal)                    (8210790)
-    - support integers (hexadecimal)                ()
+    - support integers (hexadecimal)                (c9356fe)
     - support integers (binary)
     - support integers (octal)
     - support "boolean"
