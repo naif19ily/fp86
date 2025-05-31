@@ -7,17 +7,17 @@
 	.TL: .quad 4
 	.FL: .quad 5
 
+	.f1: .string "\n\tfp86: fatal: buffer overflow, maximum is 4096 bytes per call.\n\n"
+	.f1l: .quad 65
+
+	.f2: .string "\n\tfp86: fatal: unknown formatting type, check docs.\n\n"
+	.f2l: .quad 53
+
 .section .bss
 	.BF: .zero 2048
 	.BA: .zero 2048
 
 .section .text
-
-.macro EX status
-	movq	\status, %rdi
-	movq	$60, %rax
-	syscall
-.endm
 
 .macro SR
 	movq	%r8 , -8(%rbp)
@@ -47,14 +47,24 @@
 	addq	$8, -80(%rbp)
 .endm
 
+.macro ER msg, len, status
+	movq	$1, %rax
+	movq	$2, %rdi
+	leaq	\msg, %rsi
+	movq	\len, %rdx
+	syscall
+	movq	\status, %rdi
+	movq	$60, %rax
+	syscall
+.endm
+
 .globl fp86
 
 fp86:
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$80, %rsp
+	subq	$88, %rsp
 	SR
-
 	movq	%rdi, %r8					# format string's placeholder
 	leaq	.BF(%rip), %r9					# buffer's placeholder
 	movq	$0, %r10					# number of bytes written
@@ -64,72 +74,53 @@ fp86:
 	movq	$16, -80(%rbp)					# next argument's offset to rbp
 	leaq	.BA(%rip), %r11					# argument buffer's placeholder
 	movq	$0, %r12					# argument's length
-
+	movw	$0, -82(%rbp)					# flag to know if a number is negative
 	xorq	%rax, %rax
 	xorq	%rdi, %rdi
 	xorq	%rsi, %rsi
-
 .loop:
 	cmpb	$0, (%r8)
-	jz	.fini
+	jz	.print
 	movzbl	(%r8), %edi
-
 	cmpq	.BL(%rip), %r10
 	jz	.fatal_0
-
 	cmpb	$'%', %dil
 	jz	.format_0
-
 	movb	%dil, (%r9)
 	incq	%r9
 	incq	%r10
 	jmp	.resume
-
 .format_0:
 	leaq	.BA(%rip), %r11
 	movq	$0, %r12
-
 	movw	$0, -70(%rbp)
 	movw	$0, -72(%rbp)
-
 	incq	%r8
 	movzbl	(%r8), %edi
 	cmpb	$'%', %dil
 	jz	.fper_init
-
 	cmpb	$'<', %dil
 	jz	.format_ind
-
 	cmpb	$'>', %dil
 	jz	.format_ind
-
 .format_1:
 	cmpb	$'c', %dil
 	jz	.fchr_init
-
 	cmpb	$'s', %dil
 	jz	.fstr_init
-
 	cmpb	$'x', %dil
 	jz	.fhex_init
-
 	cmpb	$'d', %dil
 	jz	.fdec_init
-
 	cmpb	$'b', %dil
 	jz	.fbin_init
-
 	cmpb	$'o', %dil
 	jz	.foct_init
-
 	cmpb	$'B', %dil
 	jz	.fbol_init
-
 	cmpb	$'p', %dil
 	jz	.fhex_init
-
 	jmp	.fatal_1
-
 .format_ind:
 	movw	%di, -70(%rbp)
 	GA
@@ -190,6 +181,18 @@ fp86:
 	movq	$8, %rbx
 .fdbo_init:
 	GA
+	cmpq	$0, %r15
+	jz	.fbdo_zero
+	jl	.fbdo_neg
+	jmp	.fbdo_keep
+.fbdo_zero:
+	movb	$'0', (%r11)
+	movq	$1, %r12
+	jmp	.buf_trans
+.fbdo_neg:
+	movw	$1, -82(%rbp)
+	negq	%r15
+.fbdo_keep:
 	movq	%r15, %rax
 	leaq	.BA(%rip), %r11
 	addq	.BL(%rip), %r11
@@ -213,6 +216,18 @@ fp86:
 #
 .fhex_init:
 	GA
+	cmpq	$0, %r15
+	jz	.fhex_zero
+	jl	.fhex_neg
+	jmp	.fhex_keep
+.fhex_zero:
+	movb	$'0', (%r11)
+	movq	$1, %r12
+	jmp	.buf_trans
+.fhex_neg:
+	movw	$1, -82(%rbp)
+	negq	%r15
+.fhex_keep:
 	movq	%r15, %rax
 	leaq	.BA(%rip), %r11
 	addq	.BL(%rip), %r11
@@ -254,7 +269,6 @@ fp86:
 	movq	.FL(%rip), %r12
 	jmp	.buf_trans
 
-
 #
 # Writing buffer argument into printable buffer:
 #
@@ -263,7 +277,7 @@ fp86:
 	xorq	%rax, %rax
 	cmpw	$'>', -70(%rbp)
 	jz	.buft_right_ind
-	jmp	.buft_write
+	jmp	.buft_write_init
 .buft_right_ind:
 	movw	-72(%rbp), %bx
 	subw	%r12w, %bx
@@ -284,6 +298,12 @@ fp86:
 	jmp	.buft_ind_cond
 .buft_write_init:
 	xorq	%rcx, %rcx
+	cmpw	$1, -82(%rbp)
+	jnz	.buft_write
+	movb	$'-', (%r9)
+	incq	%r10
+	incq	%r9
+	movb	$0, -82(%rbp)
 .buft_write:
 	cmpq	%rcx, %r12
 	jz	.buft_write_term
@@ -307,8 +327,7 @@ fp86:
 .resume:
 	incq	%r8
 	jmp	.loop
-
-.fini:
+.print:
 	movq	$1, %rax
 	xorq	%rdi, %rdi
 	movl	-68(%rbp), %edi
@@ -316,6 +335,7 @@ fp86:
 	movq	%r10, %rdx
 	syscall
 	movq	%r10, %rax
+.fini:
 	BR
 	leave
 	ret
@@ -324,7 +344,7 @@ fp86:
 # Error handling system:
 #
 .fatal_0:
-	EX	$-1
+	ER	.f1(%rip), .f1l(%rip), $1
 
 .fatal_1:
-	EX	$-2
+	ER	.f2(%rip), .f2l(%rip), $1
