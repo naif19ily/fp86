@@ -1,0 +1,68 @@
+
+    fp86 - fprintf function for x86 assembly
+
+      This project attempts to recreate the fprintf function found in C
+      programming language since we do  not have one for x86, dah...
+
+
+    - usage:
+      The fp86 function takes two arguments:
+      rdi: pointer to the format string
+      esi: file descriptor
+
+      if no format is found in rdi, the function will act like a write syscall.
+      In case formats were given they shall be pushed into the stack in the
+      inverse order they were defined (sorry but that's how stack works)
+
+      example c-like:                _________________
+                                    '                 `
+      fp86("my name is %s and i am %d y/o\n", stdout, 19, "juan diego");
+                        `                                     |
+                        |______________________________________
+
+      example asm-like:
+
+      pushq   $19
+      leaq    .name(%rip), %rax
+      pushq   %rax
+      leaq    .fmt(%rip), %rdi
+      movl    $1, %esi
+      call    fp86
+
+    - how indentation works:
+      In order to indent something you need to use either < or > after the % and before
+      the format specifier, for instance %>d, since i do not know how to put into works:
+
+      %>d           vs          %<d     suppose the number is 123 and the indentation
+                                        is 10
+      |       123|       |123     |
+       ~~~~~~~ extra spacess ~~~~~
+
+      code:
+
+      pushq   $123                      actual number
+      pushq   $10                       indentation
+      leaq    .fmt(%rip), %rdi
+      movl    $1, %esi
+      call    fp86
+    
+    - formats:
+      %%            prints %
+      %d            for integer values
+      %c            for characters
+      %s            for serie of characters
+      %x            for hexadecimal numbers
+      %o            for octal numbers
+      %b            for binary numbers
+      %B            for boolean values
+      %p            for addresses (hexadecimal notation)
+
+    - return:
+      fp86 returns the total of bytes written
+      
+
+    - notes:
+      After each call the programmer shall restore rsp to its original value via
+      adding 8 * nArgs to rsp, suppose you paased three arguments to fp86, therefore
+      after calling fp86 'addq  $24, %rsp' is required.
+

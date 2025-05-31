@@ -1,3 +1,8 @@
+#  ______  _____  _____   ____  
+# |   ___||     |<  -  > /   /_ 
+# |   ___||    _|/  _  \|   _  |
+# |___|   |___|  \_____/|______|
+
 .section .rodata
 	.f1: .string "your name is: %>s\n"
 	.f2: .string "your age is: %d 0x%x 0b%b 0o%o\n"
