@@ -161,6 +161,8 @@ fp86:
 #
 .fstr_init:
 	GA
+	cmpq	$0, %r15
+	jz	.resume
 	xorq	%rdi, %rdi
 .fstr_loop:
 	movzbl	(%r15), %edi
