@@ -13,5 +13,4 @@
     - support integers (octal)                      (8c4b5f7)
     - support "boolean"                             (34972ab)
     - support addresses                             (83cfa92)
-    - support floating numbers (insane)
 
